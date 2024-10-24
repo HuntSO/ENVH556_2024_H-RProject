@@ -1,0 +1,63 @@
+---
+title: 'Term Project Plan: Preliminary'
+author: "Hunt D. Solaro & Rachael Carter"
+format:
+  html:
+    df_print: "paged"
+    fig_caption: yes
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    self-contained: true
+    css: styles.css
+execute:
+  echo: true
+  cache: false
+  echo.comments: false
+  message: false
+  warning: false
+editor_options: 
+  chunk_output_type: console
+---
+# Project Overview
+
+The purpose of this project is to apply key skills in quantitative exposure assessment, including identifying a research question, exploring environmental exposure data, developing and evaluating an appropriate analysis, and presenting the findings.
+
+**Team Members:**
+
+Hunt D. Solaro
+Rachael Carter
+
+# Dataset:
+
+The ACT-TRAP mobile monitoring study was an air pollution monitoring campaign that was conducted between March 2019 and March 2020 in the greater Seattle area. Briefly, the campaign collected 2-minute pollutant concentrations at 309 stop locations throughout the greater Seattle area. Pollutants were simultaneously measured with high temporal resolution (measurements every 1-60 sec). These included particle number concentration (PNC, an indicator of ultrafine particulates or UFP) from four different instruments, black carbon (BC), nitrogen dioxide (NO2), carbon dioxide (CO2), and fine particulate matter (PM2.5). Each stop location was visited approximately 29 times during all seasons and days of the week between the hours of approximately 5 AM and 11 PM (Blanco et al., 2022).
+
+# Research Question & Methodology:
+
+**Research Question**
+
+Are air pollution levels higher in disadvantaged communities or near industrial sites? (Additional data needed to address this question.)
+
+**Project Methodology**
+
+To explore whether air pollution levels are higher in disadvantaged communities or near industrial sites using data from the ACT-TRAP mobile monitoring study, several steps will be taken. First, the key variables, including pollutant concentrations (PNC, BC, NO2, CO2, PM2.5), stop locations, and time, will be identified, and any missing data or outliers will be addressed. Spatial analysis will then be conducted by mapping the stop locations and examining their proximity to industrial sites and disadvantaged communities, using data such as socioeconomic indicators from census data. Time-series analysis will explore seasonal and diurnal trends in pollutant concentrations to account for variations across the year and during different hours of the day.
+
+Finally, pollutant levels will be compared between disadvantaged and affluent communities, as well as between areas near and far from industrial sites. This analysis will involve statistical tests, such as t-tests or non-parametric alternatives, and potentially regression models to account for covariates like traffic and weather conditions.
+
+# Analysis Plan
+
+First, we will classify stop locations based on socioeconomic indicators, using census data or environmental justice tools to categorize areas as "disadvantaged" or "affluent." For each location, we will calculate average pollutant concentrations (PNC, BC, NO2, CO2, PM2.5) and compare the levels between these two groups. Descriptive statistics will provide an initial overview, and we will use a t-test or Mann-Whitney U test to assess whether there are significant differences in pollution levels between disadvantaged and affluent communities. Next, we will evaluate the impact of proximity to industrial sites by calculating the distance between each stop location and the nearest industrial zone. We will categorize stops as "near" or "far" from these sites and compare the average pollutant concentrations between the two groups. Again, descriptive statistics will be followed by a t-test or Mann-Whitney U test to test for significant differences. To control for confounding variables like traffic or seasonal variation, we may also perform a regression analysis. This comprehensive approach will allow us to determine if disadvantaged communities or areas near industrial sites experience higher pollution levels.
+
+# Administrative Notes
+
+**Shared Documentation**
+
+OneDrive or GitHub would be preferred for documentation and collaboration with our code. For project writes ups, such as this, the use of OneDrive would be preferred. GitHub could/should be utilized for coding collaboration as we can pull from our fork of the main repository frequently. 
+
+**Term Project Group Contract**
+
+Rachael Carter & Hunt Solaro have previously worked in prior courses together, a contract is currently not believed to be necessary.
+
+**Collaborative Work Session**
+
+These will be on a rolling basis, Rachael & Hunt frequently work together with other course material already.
