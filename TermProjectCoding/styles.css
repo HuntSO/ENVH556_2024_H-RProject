@@ -1,0 +1,84 @@
+/* Justify all body text */
+body {
+  text-align: justify;
+  font-family: "Arial", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 20px;
+}
+
+/* Justify all paragraphs */
+p {
+  text-align: justify;
+}
+
+/* Format tables with spacing and justification */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+table, th, td {
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+th, td {
+  padding: 8px;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+/* Style headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Georgia", serif;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+h1 {
+  font-size: 2em;
+}
+
+h2 {
+  font-size: 1.75em;
+}
+
+h3 {
+  font-size: 1.5em;
+}
+
+/* Style blockquotes */
+blockquote {
+  font-style: italic;
+  background: #f9f9f9;
+  border-left: 10px solid #ccc;
+  margin: 20px;
+  padding: 10px;
+}
+
+/* Style images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 20px auto;
+}
+
+/* Justify lists */
+ul, ol {
+  text-align: justify;
+  margin-left: 20px;
+  padding-left: 20px;
+}
+
+/* Format captions */
+figcaption {
+  font-style: italic;
+  text-align: center;
+  margin-top: 5px;
+}
