@@ -1,7 +1,7 @@
 ---
 title: "Week5Lecture: Variance Components"
 author: "Lianne Sheppard for ENVH 556 Autumn 2024"
-date: "Winter 2021; Updated `r format(Sys.time(), '%d %B, %Y')`"
+date: "Fall 2024; Updated `r format(Sys.time(), '%d %B, %Y')`"
 format:
   html:
     df_print: "paged"
@@ -10,12 +10,11 @@ format:
     toc_depth: 3
     number_sections: true
     self-contained: true #save images etc. in this file (vs folders)
+editor_options: 
+  chunk_output_type: console
 ---
 
 This document was rendered on `r format(Sys.time(), '%B %d, %Y')`.
-
-# --> NOTE: HAS RENDERING ISSUE
-
 
 ```{r setup, include=FALSE}
 #-----setup-----
@@ -41,6 +40,9 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 my_repo <- 'http://cran.r-project.org'
 if (!require("pacman")) {install.packages("pacman", repos = my_repo)}
 
+# NOTE: if you receive an error with e.g., fitVCA(), you may need to reinstall lme4
+# install.packages("lme4", repos = "http://cran.r-project.org", type = "source")
+
 # Load the other packages, installing as needed.
 pacman::p_load(knitr, dplyr, tidyr, modelr, stringr, ggplot2, Hmisc, lme4, VCA, 
                formatR)
@@ -50,14 +52,11 @@ pacman::p_load(knitr, dplyr, tidyr, modelr, stringr, ggplot2, Hmisc, lme4, VCA,
 ```{r directory.organization.and.read.data, echo=FALSE, warning=FALSE}
 #-----directory organization and read data-----
 
-# specify working directory
-project_path <- getwd()
-
 # create "Datasets" directory if one does not already exist    
-dir.create(file.path(project_path,"Datasets"), showWarnings=FALSE, recursive = TRUE)
+dir.create(file.path("Datasets"), showWarnings=FALSE, recursive = TRUE)
 
 # specify data path
-data_path <- file.path(project_path,"Datasets")
+data_path <- file.path("Datasets")
 
 # specify files to read (their names will be used for variable assignment)
 file_names <- c(snapshot = "allseasonsR.rds", DEMS = "DEMSCombinedPersonal.rds")
@@ -267,6 +266,7 @@ summary(fixed_ef)
 #-----ANOVA on site-----
 
 # (formerly slide 17):  same in ANOVA
+## The group_loc groups show significantly different mean ln_nox levels, indicating a meaningful relationship between these groupings and log NOx levels.
 anova(fixed_ef)
 
 ```
@@ -275,6 +275,8 @@ anova(fixed_ef)
 
 VCA allows the MOM estimates and easy comparison with REML estimates of variance
 components.
+
+MOM is a simpler, often computationally faster method that may be okay if data are 'simple.'
 
 ```{r VCA.implementation}
 #-----VCA implementation-----
@@ -290,6 +292,8 @@ varPlot(form = ln_nox~ group_loc, Data = as.data.frame(fvc) )
 fit_MOM <- anovaVCA(ln_nox ~ group_loc, Data = as.data.frame(fvc) )
 fit_MOM
 
+# NOTE: if you receive an error with fitVCA(), you may need to reinstall lme4
+# install.packages("lme4", repos = "http://cran.r-project.org", type = "source")
 fit_REML <- fitVCA(ln_nox ~ group_loc, Data = as.data.frame(fvc), method = "REML")
 fit_REML
 
@@ -302,7 +306,7 @@ fit_REML
 
 ## Slides 23 & 24:  Estimation using lme
 
-A key point here that the `lmer` REML estimates are the same as from `VCA`.
+A key point here that the **`lmer` REML estimates are the same as from `VCA`**.
 Discuss why we use ML at all -- basically to easily compare models.  Because REML adjusts for the bias in estimation, we can't compare models fit with REML.
 
 ```{r REML.with.snapshot}
@@ -321,6 +325,7 @@ summary(lmefit_ML)
 
 ```
 
+## Slide 25:  Compile previous snapshot results into a table for comparison
 
 ## Same examples with DEMS 
 
@@ -395,48 +400,7 @@ summary(mixedfit3_ML)
 
 ```
 
-
-## Slide 37:  DEMS V Table 3 Facility A example U1 groups
-
-Verifying:  This result has the same number of observations (108) and mdj groups
-(13) compared to the Stata example from lecture.  My mean is about the same
-(5.85).  This seems to be the same dataset
-
-```{r model.DEMSV_U1}
-#-----model DEMSV_U1-----
-
-DEMSV_U1 <- lmer(ln_ecdata ~  (1|mdj), data = DEMS, REML = TRUE, 
-                 subset = facilityid == "A" & u_s == "u")
-
-summary(DEMSV_U1)
-
-```
-
-## Slides 38:  DEMS V Table 3 Facility A example U2 groups
-
-```{r model.DEMSV_U2}
-#-----model DEMSV_U2-----
-
-DEMSV_U2 <- lmer(ln_ecdata ~  as.factor(group2time) + (1|mdj), data = DEMS, 
-                 REML = TRUE, subset = facilityid == "A" & u_s == "u")
-
-summary(DEMSV_U2)
-
-```
-
-## Slide 39:  DEMS V Table 3 Facility A example U3 groups
-
-```{r model.DEMSV_U3}
-#-----model DEMSV_U3-----
-
-DEMSV_U3 <- lmer(ln_ecdata ~  as.factor(group3area) + (1|mdj), data = DEMS, 
-                 REML = TRUE, subset = facilityid == "A" & u_s == "u")
-
-summary(DEMSV_U3)
-
-```
-
-## Slide 43:  Regression for association with random effects
+## Slide 36:  Regression for association with random effects
 
 Use the snapshot data to compare estimates and SEs for a fixed effect with and
 without random effects
@@ -448,7 +412,7 @@ without random effects
 # linear model:
 lmfit1 <- lm(ln_nox ~ Pop_5000, data = fvc)
 
-#summary(lmfit1)
+# summary(lmfit1)
 
 cat("\nStandard linear model summary, coefficients then their confidence intervals\n")
 coef(summary(lmfit1))
@@ -497,7 +461,8 @@ coef(summary(mixedfit2_REML))
 confint(mixedfit2_REML)
 
 ```
-## Slide 44:  Regression for prediction with random effects
+
+## Slide 37:  Regression for prediction with random effects
 
 To predict from a mixed model, i.e. a linear model with fixed and random
 effects, you MUST have the same groups as you used to fit your model.  You can't
@@ -555,11 +520,6 @@ p2 <- predict(mixedfit1_REML, newdata)
 # new data, level 0 (fixed effects only)
 p3 <- predict(mixedfit1_REML, newdata, re.form = NA)
 
-# explicitly specify RE model we want
-p4 <- predict(mixedfit1_REML, newdata, re.form = ~(1|group_loc)) 
-
-# verify that p2 and p4 are identical as they are supposed to be
-identical(p2, p4)
 plot(p3, p2)
 
 # Note the predictions with random effects are more variable, as one would expect.
@@ -567,6 +527,50 @@ summary(p3)
 summary(p2)
 
 ```
+
+
+## DEMS V results moved to extra lecture slides, slides 44-46
+
+### Slide 44:  DEMS V Table 3 Facility A example U1 groups
+
+Verifying:  This result has the same number of observations (108) and mdj groups
+(13) compared to the Stata example from lecture.  My mean is about the same
+(5.85).  This seems to be the same dataset
+
+```{r model.DEMSV_U1}
+#-----model DEMSV_U1-----
+
+DEMSV_U1 <- lmer(ln_ecdata ~  (1|mdj), data = DEMS, REML = TRUE, 
+                 subset = facilityid == "A" & u_s == "u")
+
+summary(DEMSV_U1)
+
+```
+
+## Slides 45:  DEMS V Table 3 Facility A example U2 groups
+
+```{r model.DEMSV_U2}
+#-----model DEMSV_U2-----
+
+DEMSV_U2 <- lmer(ln_ecdata ~  as.factor(group2time) + (1|mdj), data = DEMS, 
+                 REML = TRUE, subset = facilityid == "A" & u_s == "u")
+
+summary(DEMSV_U2)
+
+```
+
+## Slide 46:  DEMS V Table 3 Facility A example U3 groups
+
+```{r model.DEMSV_U3}
+#-----model DEMSV_U3-----
+
+DEMSV_U3 <- lmer(ln_ecdata ~  as.factor(group3area) + (1|mdj), data = DEMS, 
+                 REML = TRUE, subset = facilityid == "A" & u_s == "u")
+
+summary(DEMSV_U3)
+
+```
+
 
 
 # Appendix 
