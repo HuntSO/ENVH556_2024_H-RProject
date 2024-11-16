@@ -1,0 +1,191 @@
+---
+title: 'Term Project Code'
+author: "Hunt D. Solaro & Rachael Carter"
+format:
+  html:
+    df_print: "paged"
+    fig_caption: yes
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    self-contained: true
+    css: styles.css
+execute:
+  echo: true
+  cache: false
+  echo.comments: false
+  message: false
+  warning: false
+editor_options: 
+  chunk_output_type: console
+---
+```{r setup}
+# Clear workspace of all objects and unload non-base packages
+rm(list = ls(all = TRUE))
+if (!is.null(sessionInfo()$otherPkgs)) {
+    suppressWarnings(
+        lapply(paste('package:', names(sessionInfo()$otherPkgs), sep=""),
+               detach, character.only=TRUE, unload=TRUE, force=TRUE)
+    )
+}
+
+# Load or install 'pacman' for package management
+my_repo <- 'http://cran.r-project.org'
+if (!require("pacman")) {
+    install.packages("pacman", repos = my_repo)
+}
+
+# **SPH server**: need to install rnaturalearthhires like so on the SPH server
+if (!require("rnaturalearthhires")) {
+    install.packages("rnaturalearthhires", repos = "https://ropensci.r-universe.dev", type = "source")
+}
+
+pacman::p_load(
+    tidyverse,                 # Data manipulation and visualization
+    # takes a while to install on SPH
+    ggspatial,                 # Geospatial extensions for ggplot.  
+    maptiles, # maptiles and tmap libraries can be used instead of or in combination with ggplot + ggspatial. maptiles offers more tile-based map flexibility; ggspatial provides the ability to annotate maps easily; tmap offers both static and interactive maps that we won't review in this course. 
+    terra, # alternative mapping with raster files
+    
+    # need for SPH server?
+    prettymapr,
+    
+    rnaturalearth,             # Land features for map layers (remove water locations)
+    rnaturalearthhires,        # High-resolution land features 
+    sf,                        # Handling spatial objects (modern replacement for 'sp')
+    knitr,                     # Formatting tables with kable()
+    gstat,                     # Geostatistical methods (e.g., kriging)
+    Hmisc,                     # Data description functions like describe()
+    scales,                    # Color scale customization for ggplot
+    akima,                     # Bivariate interpolation for irregular data
+    downloader                 # Downloading files over HTTP/HTTPS
+)
+```
+
+```{r Download data files}
+# Define a helper function to download and read files
+download_and_read_file <- function(data_url, output_file_path) {
+  # Download the file if it doesn't already exist
+  if (!file.exists(output_file_path)) {
+    download.file(url = data_url, destfile = output_file_path, mode = "wb")
+    message("Downloaded: ", basename(output_file_path))
+  } else {
+    message("File already exists: ", basename(output_file_path))
+  }
+  
+  # Read the CSV file
+  read.csv(output_file_path)
+}
+
+# Define the directory for storing files
+Project_Data <- "Project_Data"
+dir.create(Project_Data, showWarnings = FALSE)
+
+# Process each file individually
+# 1. "annual_data_and_predictions.csv"
+annual <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/annual_data_and_predictions.csv?download=1",
+  output_file_path = file.path(Project_Data, "annual_data_and_predictions.csv")
+)
+
+# 2. "dr0311_mobile_covariates.csv"
+mm_covariates <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/dr0311_mobile_covariates.csv?download=1",
+  output_file_path = file.path(Project_Data, "dr0311_mobile_covariates.csv")
+) %>%
+  dplyr::select(location = native_id, m_to_a1)
+
+# 3. "census_block_predictions.csv"
+census_block_predictions <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/census_block_predictions.csv?download=1",
+  output_file_path = file.path(Project_Data, "census_block_predictions.csv")
+)
+
+# 4. "dr0311_grid_covariates.csv"
+dr0311_grid_covariates <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/dr0311_grid_covariates.csv?download=1",
+  output_file_path = file.path(Project_Data, "dr0311_grid_covariates.csv")
+)
+
+# 5. "grid_predictions.csv"
+grid_predictions <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/grid_predictions.csv?download=1",
+  output_file_path = file.path(Project_Data, "grid_predictions.csv")
+)
+
+# 6. "model_performance.csv"
+model_performance <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/model_performance.csv?download=1",
+  output_file_path = file.path(Project_Data, "model_performance.csv")
+)
+
+# 7. "stop_data.csv"
+stop_data <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/stop_data.csv?download=1",
+  output_file_path = file.path(Project_Data, "stop_data.csv")
+)
+
+# 8. "wa_block10_covariates.csv"
+wa_block10_covariates <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/wa_block10_covariates.csv?download=1",
+  output_file_path = file.path(Project_Data, "wa_block10_covariates.csv")
+)
+
+# Check the loaded data
+cat("Preview of annual:\n")
+print(head(annual))
+
+cat("Preview of mm_covariates:\n")
+print(head(mm_covariates))
+
+cat("Preview of census_block_predictions:\n")
+print(head(census_block_predictions))
+
+cat("Preview of dr0311_grid_covariates:\n")
+print(head(dr0311_grid_covariates))
+
+cat("Preview of grid_predictions:\n")
+print(head(grid_predictions))
+
+cat("Preview of model_performance:\n")
+print(head(model_performance))
+
+cat("Preview of stop_data:\n")
+print(head(stop_data))
+
+cat("Preview of wa_block10_covariates:\n")
+print(head(wa_block10_covariates))
+```
+
+```{r Stop_Data Filtering}
+# Filter the stop_data dataset and clean up columns
+stop_data_filtered <- stop_data %>%
+  # Keep only specific values in the `variable` column
+  dplyr::filter(variable %in% c("neph_bscat", "ma200_ir_bc1", "no2")) %>%
+  # Remove differentiation in `primary_instrument` (drop the column)
+  dplyr::select(-instrument_id) %>%
+  # Collapse `primary_instrument` data (remove if it's no longer needed)
+  dplyr::mutate(primary_instrument = NULL)
+
+# View the filtered dataset
+head(stop_data_filtered)
+
+# Count missing variables across all stop_ids
+missing_variable_counts <- stop_data_filtered %>%
+  dplyr::group_by(stop_id) %>%
+  dplyr::summarise(
+    has_neph_bscat = any(variable == "neph_bscat"),
+    has_ma200_ir_bc1 = any(variable == "ma200_ir_bc1"),
+    has_no2 = any(variable == "no2"),
+    .groups = "drop"
+  ) %>%
+  dplyr::summarise(
+    missing_neph_bscat = sum(!has_neph_bscat),
+    missing_ma200_ir_bc1 = sum(!has_ma200_ir_bc1),
+    missing_no2 = sum(!has_no2)
+  )
+
+# Display the results
+cat("Overall missing variable counts:\n")
+print(missing_variable_counts)
+```
