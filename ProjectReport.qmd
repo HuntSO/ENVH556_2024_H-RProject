@@ -1,0 +1,83 @@
+---
+title: "Unequal Air: Assessing the Relationship Between Socioeconomic Status and Air Pollution Exposure in Washington State"
+author: "Rachael Carter & Hunt D. Solaro"
+format:
+  html:
+    df_print: "paged"
+    fig_caption: yes
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    self-contained: true #save images etc. in this file (vs folders)
+execute:
+  echo: true
+  warning: false
+  cache: false
+  message: false
+---
+
+This document was rendered on `r format(Sys.time(), '%B %d, %Y')`. 
+
+# Introduction
+
+## Purpose
+The purpose of this term project for ENV H 556 is to investigate the relationship between air pollution levels and socioeconomic status (SES) in Washington State. Specifically, the study aims to assess whether concentrations of nitrogen dioxide (NO₂) and Black Carbon (BC) are higher in census tracts characterized by low SES, as identified by the Washington State Department of Health Environmental Justice Screening Tool. By analyzing this relationship, the project seeks to provide insights into potential environmental injustices and disparities in pollution exposure, contributing to a broader understanding of how social determinants of health intersect with environmental factors.
+
+## Scientific Importance
+Nitrogen dioxide (NO₂) and Black Carbon (BC) are well-documented air pollutants linked to adverse health outcomes, including respiratory and cardiovascular diseases (citation). By examining their concentrations in relation to SES using the Washington State Department of Health Environmental Justice Screening Tool, this research contributes to the growing body of evidence on environmental health disparities.
+
+The findings of this study provide implications for public health policies, urban planning, and environmental regulations. Identifying patterns of unequal exposure can inform targeted interventions to mitigate health risks in vulnerable populations and promote equitable environmental policies.
+
+# Research Question & Hypothesis
+## Question
+Are levels of NO₂ and Black Carbon (BC) air pollution higher in census tracts characterized by low socioeconomic status (SES) as identified by the Washington State Department of Health (DOH) Environmental Justice Screening Tool?
+
+## Hypothesis
+NO₂ and Black Carbon concentrations are significantly higher in census tracts with low socioeconomic status as defined by the Washington DOH Environmental Justice Screening Tool.
+
+# Data Source(s)
+This study integrates air pollution data from the Adult Changes in Thought Traffic-Related Air Pollution (ACT-TRAP) Seattle mobile monitoring study and socioeconomic status (SES) data from the Washington State Department of Health (DOH) Environmental Health Disparities (EHD) Map. Below is an overview of each dataset.
+
+## Air Pollution Data: ACT-TRAP Seattle Study
+The ACT-TRAP study provides high-resolution traffic-related air pollution (TRAP) data collected within a 1,200 km² area of the greater Seattle region. Mobile monitoring was conducted at 309 roadside locations between March 2019 and March 2020, with repeated two-minute measurements taken approximately 29 times per location. Data collection occurred across all seasons, days of the week, and most hours of the day (5 AM–11 PM). Median pollutant concentrations from each site visit were used to estimate annual averages, which were modeled using universal kriging and partial least squares (UK-PLS) methods to predict air pollution levels across the region. 
+
+Key files used from this dataset include annual_data_and_predictions.csv, which contains annual average pollutant concentrations and cross-validated predictions, dr0311_mobile_covars.csv, which provides geographic covariates such as land use, proximity to roadways, and population density, and dr0311_grid_covars.csv and wa_block10_inputs.csv, which offer geospatial data for unmonitored locations.
+
+## Socioeconomic Status Data: Washington DOH Environmental Health Disparities Map
+The socioeconomic status (SES) data for this study comes from the Washington State Department of Health (DOH) Environmental Health Disparities (EHD) Map, specifically the Socioeconomic Factors layer. This layer incorporates multiple indicators to characterize SES within Washington census tracts. These indicators include income levels, educational attainment, linguistic isolation, unemployment rates, and housing burden. Each of these variables is derived from reliable government data sources, such as the American Community Survey (ACS) conducted by the U.S. Census Bureau.
+
+To determine SES, the Washington DOH combined and weighted these variables to create a composite score for each census tract. Income levels reflect the proportion of households living below the federal poverty line, while educational attainment measures the percentage of the population aged 25 or older who have not completed high school. Linguistic isolation represents households where no one aged 14 or older speaks English "very well," a factor that can limit access to resources and services. Unemployment rates indicate the percentage of the labor force that is actively seeking work but unable to find it, and housing burden measures the proportion of households spending more than 30% of their income on rent or mortgage payments. For this study, only the socioeconomic factors are utilized, excluding other layers related to environmental exposures, effects, and sensitive populations.
+
+# Methodology
+
+## Geographic Covariates
+The selection of covariates for this study was guided by their relevance to understanding and predicting air pollution exposure in relation to socioeconomic status (SES). The chosen covariates reflect various geographic, demographic, and infrastructural factors that are known to influence traffic-related air pollution (TRAP).
+
+- **M_to_a1:** This variable measures the distance to A1 roadways (major highways), which are significant sources of nitrogen dioxide (NO₂) and Black Carbon (BC) emissions due to high traffic volumes.
+
+- **M_to_l_airp:** This covariate represents the distance to the nearest large airport.
+
+- **M_to_truck:** This variable indicates the proximity to truck routes. Truck traffic contributes disproportionately to TRAP emissions, including NO₂ and Black Carbon.
+
+- **M_to_bus:** This covariate measures the distance to bus routes, which may influence localized air pollution levels, particularly in areas with high-frequency transit operations.
+
+- **M_to_l_port:** This variable represents the distance to large ports. Ports are significant sources of air pollution due to emissions from ships, cargo-handling equipment, and associated trucking activities.
+
+- **Tl_s:** This covariate captures traffic load, providing a measure of the intensity of vehicular activity in a given area.
+
+- **pop10_s1500:** This variable represents population density within a 1,500-meter radius, derived from 2010 Census data.
+
+## Methods
+Nitrogen dioxide (NO₂) and Black Carbon (BC) levels were characterized using descriptive statistics such as mean, median, standard deviation, interquartile range (IQR), and range to understand their distributions. Skewness and non-normality were assessed, and transformations, such as logarithmic scaling, were applied where necessary to improve model assumptions and enhance prediction accuracy.
+
+Key geographic and demographic covariates were selected, as noted above, to account for factors influencing pollutant levels, including proximity to roadways, truck routes, bus routes, ports, and airports, as well as population density and traffic load. These covariates, derived from the dr0311_grid_covars.csv and wa_block10_inputs.csv datasets, were chosen based on their established association with traffic-related air pollution (TRAP) and their relevance to the study region.
+
+Pollutant levels were predicted using Universal Kriging (UK), a geostatistical method that accounts for spatial dependence and incorporates covariates. The model was developed based on a variogram, which quantified spatial autocorrelation in the data. Predictions were generated at census tract centroids, ensuring alignment with standard practices to accurately represent population exposure. Model performance was validated using cross-validation, with R² and root mean square error (RMSE) calculated to assess prediction accuracy
+
+Socioeconomic status (SES) data were sourced from the Washington State Department of Health Environmental Health Disparities (EHD) Map, specifically the Socioeconomic Factors layer. Census tracts were binned into deciles based on SES scores, enabling comparison with predicted pollutant levels.
+
+Predicted pollutant levels were analyzed and visualized through scatter plots, box plots, and choropleth maps. Scatter plots illustrated the relationship between SES scores and pollutant levels, while decile box plots highlighted pollutant distributions across SES categories. Two-color quantile maps were generated to display predicted pollutant levels overlaid with SES deciles at the census tract level.
+
+# Results
+
+# Discussion
