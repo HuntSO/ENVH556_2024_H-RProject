@@ -9,11 +9,13 @@ format:
     toc_depth: 3
     number_sections: true
     self-contained: true #save images etc. in this file (vs folders)
+    css: styles.css 
 execute:
   echo: true
   warning: false
   cache: false
   message: false
+bibliography: Citations/Lab1-bilio.bib
 ---
 
 This document was rendered on `r format(Sys.time(), '%B %d, %Y')`. 
@@ -30,10 +32,10 @@ The findings of this study provide implications for public health policies, urba
 
 # Research Question & Hypothesis
 ## Question
-Are levels of NO₂ and Black Carbon (BC) air pollution higher in census tracts characterized by low socioeconomic status (SES) as identified by the Washington State Department of Health (DOH) Environmental Justice Screening Tool?
+Are levels of NO₂ air pollution higher in census tracts characterized by low socioeconomic status (SES) as identified by the Washington State Department of Health (DOH) Environmental Justice Screening Tool?
 
 ## Hypothesis
-NO₂ and Black Carbon concentrations are significantly higher in census tracts with low socioeconomic status as defined by the Washington DOH Environmental Justice Screening Tool.
+NO₂ concentrations are significantly higher in census tracts with low socioeconomic status as defined by the Washington DOH Environmental Justice Screening Tool.
 
 # Data Source(s)
 This study integrates air pollution data from the Adult Changes in Thought Traffic-Related Air Pollution (ACT-TRAP) Seattle mobile monitoring study and socioeconomic status (SES) data from the Washington State Department of Health (DOH) Environmental Health Disparities (EHD) Map. Below is an overview of each dataset.
@@ -68,16 +70,699 @@ The selection of covariates for this study was guided by their relevance to unde
 - **pop10_s1500:** This variable represents population density within a 1,500-meter radius, derived from 2010 Census data.
 
 ## Methods
-Nitrogen dioxide (NO₂) and Black Carbon (BC) levels were characterized using descriptive statistics such as mean, median, standard deviation, interquartile range (IQR), and range to understand their distributions. Skewness and non-normality were assessed, and transformations, such as logarithmic scaling, were applied where necessary to improve model assumptions and enhance prediction accuracy.
+Nitrogen dioxide (NO₂) levels were characterized using descriptive statistics, including mean, standard deviation, geometric mean, and measures of missing data, to assess their distributions. Transformations, such as logarithmic scaling, were applied where appropriate to meet model assumptions and improve prediction accuracy. Data were sourced from annual pollutant measurements, mobile covariates, and census block and grid-based datasets, which included key geographic covariates (e.g., proximity to roadways, truck routes, bus routes, ports, and airports) and demographic indices (e.g., population density, traffic load, and environmental justice metrics). These covariates were selected based on established associations with traffic-related air pollution (TRAP).
 
-Key geographic and demographic covariates were selected, as noted above, to account for factors influencing pollutant levels, including proximity to roadways, truck routes, bus routes, ports, and airports, as well as population density and traffic load. These covariates, derived from the dr0311_grid_covars.csv and wa_block10_inputs.csv datasets, were chosen based on their established association with traffic-related air pollution (TRAP) and their relevance to the study region.
+Pollutant levels were predicted using Universal Kriging (UK), a geostatistical method that incorporates spatial dependence and covariates. Spatial structure was assessed through variogram modeling, and best-fit models were identified. Predictions were generated at census block centroids and visualized on OpenStreetMap tiles to align predictions with population exposure at a local scale. Prediction uncertainties were quantified through standard error estimation.
 
-Pollutant levels were predicted using Universal Kriging (UK), a geostatistical method that accounts for spatial dependence and incorporates covariates. The model was developed based on a variogram, which quantified spatial autocorrelation in the data. Predictions were generated at census tract centroids, ensuring alignment with standard practices to accurately represent population exposure. Model performance was validated using cross-validation, with R² and root mean square error (RMSE) calculated to assess prediction accuracy
+Model performance was validated using cross-validation methods, including 5-fold cross-validation and leave-one-out cross-validation (LOO). Metrics such as root mean square error (RMSE) and R² were used to evaluate prediction accuracy. Socioeconomic data, sourced from EPA EJSCREEN, provided demographic indices (DEMOGIDX_2 and DEMOGIDX_5) for further analysis.
 
-Socioeconomic status (SES) data were sourced from the Washington State Department of Health Environmental Health Disparities (EHD) Map, specifically the Socioeconomic Factors layer. Census tracts were binned into deciles based on SES scores, enabling comparison with predicted pollutant levels.
-
-Predicted pollutant levels were analyzed and visualized through scatter plots, box plots, and choropleth maps. Scatter plots illustrated the relationship between SES scores and pollutant levels, while decile box plots highlighted pollutant distributions across SES categories. Two-color quantile maps were generated to display predicted pollutant levels overlaid with SES deciles at the census tract level.
+Relationships between NO₂ predictions and socioeconomic indices were examined using scatter plots with regression lines. Predicted pollutant levels were visualized on choropleth maps, overlaid with socioeconomic indices to explore spatial and demographic patterns.
 
 # Results
+```{r setup, echo = FALSE, include = FALSE}
+# Clear workspace of all objects and unload non-base packages
+rm(list = ls(all = TRUE))
+if (!is.null(sessionInfo()$otherPkgs)) {
+    suppressWarnings(
+        lapply(paste('package:', names(sessionInfo()$otherPkgs), sep=""),
+               detach, character.only=TRUE, unload=TRUE, force=TRUE)
+    )
+}
+
+# Load or install 'pacman' for package management
+my_repo <- 'http://cran.r-project.org'
+if (!require("pacman")) {
+    install.packages("pacman", repos = my_repo)
+}
+
+# **SPH server**: need to install rnaturalearthhires like so on the SPH server
+if (!require("rnaturalearthhires")) {
+    install.packages("rnaturalearthhires", repos = "https://ropensci.r-universe.dev", type = "source")
+}
+
+pacman::p_load(
+    tidyverse,                 # Data manipulation and visualization
+    # takes a while to install on SPH
+    ggspatial,                 # Geospatial extensions for ggplot.  
+    maptiles, # maptiles and tmap libraries can be used instead of or in combination with ggplot + ggspatial. maptiles offers more tile-based map flexibility; ggspatial provides the ability to annotate maps easily; tmap offers both static and interactive maps that we won't review in this course. 
+    terra, # alternative mapping with raster files
+    
+    # need for SPH server?
+    prettymapr,
+    
+    rnaturalearth,             # Land features for map layers (remove water locations)
+    rnaturalearthhires,        # High-resolution land features 
+    sf,                        # Handling spatial objects (modern replacement for 'sp')
+    knitr,                     # Formatting tables with kable()
+    gstat,                     # Geostatistical methods (e.g., kriging)
+    Hmisc,                     # Data description functions like describe()
+    scales,                    # Color scale customization for ggplot
+    akima,                     # Bivariate interpolation for irregular data
+    downloader,                 # Downloading files over HTTP/HTTPS
+    gridExtra,                  # for combining plots into one figure
+    EnvStats,                   #for geo mean
+    readxl
+)
+```
+```{r Download data files, echo = FALSE, include = FALSE}
+# Define a helper function to download and read files
+download_and_read_file <- function(data_url, output_file_path) {
+  # Download the file if it doesn't already exist
+  if (!file.exists(output_file_path)) {
+    download.file(url = data_url, destfile = output_file_path, mode = "wb")
+    message("Downloaded: ", basename(output_file_path))
+  } else {
+    message("File already exists: ", basename(output_file_path))
+  }
+  
+  # Read the CSV file
+  read.csv(output_file_path)
+}
+
+# Define the directory for storing files
+Project_Data <- "Project_Data"
+dir.create(Project_Data, showWarnings = FALSE)
+
+# Process each file individually
+# 1. "annual_data_and_predictions.csv"
+annual <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/annual_data_and_predictions.csv?download=1",
+  output_file_path = file.path(Project_Data, "annual_data_and_predictions.csv")
+)
+
+# 2. "dr0311_mobile_covariates.csv"
+mm_covariates <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/dr0311_mobile_covariates.csv?download=1",
+  output_file_path = file.path(Project_Data, "dr0311_mobile_covariates.csv")
+)
+
+```
+
+```{r, echo = FALSE, include = FALSE}
+# 3. "census_block_predictions.csv"
+census_block_predictions <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/census_block_predictions.csv?download=1",
+  output_file_path = file.path(Project_Data, "census_block_predictions.csv")
+)
+
+# 4. "dr0311_grid_covariates.csv"
+dr0311_grid_covariates <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/dr0311_grid_covariates.csv?download=1",
+  output_file_path = file.path(Project_Data, "dr0311_grid_covariates.csv")
+)
+```
+
+```{r, echo = FALSE, include = FALSE}
+
+# 5. "grid_predictions.csv"
+grid_predictions <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/grid_predictions.csv?download=1",
+  output_file_path = file.path(Project_Data, "grid_predictions.csv")
+)
+
+# 6. "wa_block10_covariates.csv"
+wa_block10_covariates <- download_and_read_file(
+  data_url = "https://zenodo.org/records/13761282/files/wa_block10_covariates.csv?download=1",
+  output_file_path = file.path(Project_Data, "wa_block10_covariates.csv")
+)
+
+```
+
+```{r, echo = FALSE, include = FALSE}
+# Define the ZIP URL and output file path
+zip_url <- "https://gaftp.epa.gov/EJScreen/2024/2.31_August_useMe/EJSCREEN_2024_BG_StatePct_with_AS_CNMI_GU_VI.csv.zip"
+output_csv <- file.path(getwd(), "EJSCREEN_2024_BG_StatePct_with_AS_CNMI_GU_VI.csv")
+
+# Temporary file for the ZIP
+temp_zip <- tempfile(fileext = ".zip")
+
+# Download the ZIP file
+download.file(zip_url, temp_zip, mode = "wb")
+
+# Unzip and extract the CSV to the working directory
+unzip(temp_zip, files = NULL, exdir = getwd())
+
+# Confirm the extracted file
+print(paste("File saved to:", output_csv))
+list.files(getwd(), pattern = "EJSCREEN_2024_BG_StatePct_with_AS_CNMI_GU_VI.csv", full.names = TRUE)
+
+# Define the path to the already downloaded CSV file
+csv_path <- file.path(getwd(), "EJSCREEN_2024_BG_StatePct_with_AS_CNMI_GU_VI.csv")
+
+# Load the CSV file into `ej_screen`
+ej_screen <- read.csv(csv_path)
+```
+
+```{r joining covariates to annual data like lab_1, echo = FALSE, include = FALSE}
+# Add some example geographic covariates
+
+# Select covariates of interest (no renaming needed since `location` already exists)
+mm_covariates <- mm_covariates %>%
+  dplyr::select(location = native_id, m_to_a1, m_to_l_airp, m_to_truck, m_to_bus, m_to_l_port, tl_s00500, bus_s00500, pop10_s01500)
+
+# Join `annual` with `mm_covariates`
+annual <- dplyr::left_join(annual, mm_covariates, by = "location")
+```
+
+```{r adding site type to data frame, echo = FALSE, include = FALSE}
+#-----adding site type to data frame------
+
+#adding site type based on location and renaming for table readability
+annual_sites <- annual %>%
+  mutate(
+    site_named = case_when(
+      substr(location, 1, 2) == "MS" ~ "Normal Site", substr(location, 1, 2) == "MC" ~ "Collocation Site"
+      
+    )
+  )
+```
+
+## Descriptive Statistics
+
+Nitrogen dioxide (NO₂) levels were higher at collocation sites compared to normal sites. The arithmetic mean NO₂ concentration was 15.05 ppb at collocation sites, with a standard deviation of 4.92 ppb, while normal sites had a lower arithmetic mean of 9.15 ppb and a standard deviation of 2.47 ppb. The geometric mean NO₂ concentration was 14.47 ppb for collocation sites and 8.85 ppb for normal sites, with geometric standard deviations of 1.36 and 1.29, respectively. These results indicate higher variability and concentrations of NO₂ at collocation sites compared to normal sites.
+```{r make a summary table, echo=TRUE, include = FALSE}
+#-----table with dplyr------
+annual_summary <- annual_sites %>% 
+  group_by(variable, site_named) %>% 
+  summarise(,
+            Arithmetic_Mean = mean(value, na.rm = TRUE),
+            Arithmetic_SD = sd(value, na.rm = TRUE),
+            Geo_Mean = geoMean(value, na.rm = TRUE),
+            Geo_SD = geoSD(value, na.rm = TRUE),
+        
+            )
+
+
+# And here is the same result printed using kable
+kable(annual_summary,
+      # only show 2 digits
+      digits = 2)
+
+```
+
+The distribution of NO₂ measurements closely approximates normality, as indicated by the alignment between the kernel density estimate (KDE) and the normal distribution curve, despite minor deviations in the tail. The mean NO₂ concentration, marked by the vertical dotted line, aligns well with the center of the distribution. As the deviations were minimal, no logarithmic transformation was applied for further analysis.
+
+```{r histogram of no2, warning=FALSE, message=FALSE, include = FALSE}
+#-----Make a histogram of no2 measurements-----------
+
+# Calculate the mean and standard deviation of the 'value' column
+mean_value_no2 <- mean(annual$value[annual$variable == "no2"], na.rm = TRUE)
+sd_value_no2 <- sd(annual$value[annual$variable == "no2"], na.rm = TRUE)
+
+# Create the density plot with the normal distribution overlay
+# The purple line is a kernel density estimate representing the true shape of your data, while the red dashed line assumes a perfect normal distribution with the same mean and standard deviation.
+
+p_no2 <- annual %>%
+  filter(variable == "no2") %>%
+  ggplot(aes(x = value)) +
+  # Add the density curve with some transparency
+  geom_density(alpha = 0.5, color = "purple") +
+  # Add the normal distribution curve using stat_function
+  stat_function(fun = dnorm, args = list(mean = mean_value_no2, sd = sd_value_no2),
+                color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean_value_no2, linetype = "dotted") +
+  theme_classic() + 
+  #  a few style options, such as axis expansion so the bars aren't "floating" and an overall theme.
+  scale_y_continuous(expand = expand_scale(mult = c(0, .1))) + 
+  #add x label
+  xlab("Measurement (ppb)") +
+  #add title and blanking the y axis for readability later
+  labs(title = "NO2", y = " ")
+
+
+# Display the plot
+p_no2
+
+```
+
+## Universal Kriging Setup
+
+The spatial distribution of NO₂ concentrations across Seattle was analyzed using Universal Kriging. Key geographic covariates, including proximity to major roads, airports, truck routes, and bus stops, as well as population density and traffic load, were incorporated into the model. Demographic indices (DEMOGIDX_2 and DEMOGIDX_5) were also included to assess potential associations between NO₂ levels and socioeconomic factors. Spatial data were transformed into appropriate coordinate reference systems, and only land areas were retained to focus on populated regions. This setup enabled the kriging model to account for spatial dependence and covariates, facilitating accurate prediction of NO₂ levels.
+
+```{r define coordinate systems, include = FALSE, echo = FALSE}
+
+# Define coordinate systems using EPSG codes. Here we use numbers and strings as an example.  
+# WGS84 latitude-longitude. same as: "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+latlong_proj <- 4326  
+# projection in meters we need for distance calculations
+lambert_proj <- "+proj=lcc +lat_1=33 +lat_2=45 +lat_0=39 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs"
+```
+
+```{r getting no2 only, include = FALSE, echo = FALSE}
+grid_predictions_no2 <- grid_predictions %>%
+  filter(variable == "no2")
+
+block_predictions_no2 <- census_block_predictions %>%
+  filter(variable == "no2")
+
+```
+
+
+```{r add lat long to grid covariates, include = FALSE, echo = FALSE}
+seattle_grid<- left_join(dr0311_grid_covariates, grid_predictions_no2, by="location_id") %>%
+  # select a subset of relevant columns
+  select(location_id, m_to_a1, m_to_l_airp, m_to_truck, m_to_bus, longitude.y, latitude.y, m_to_l_port, tl_s00500, bus_s00500, pop10_s01500 )
+
+```
+
+
+```{r add lat long to block covariates, include = FALSE, echo = FALSE}
+seattle_block<- left_join(wa_block10_covariates, block_predictions_no2, by="location_id") %>%
+  # select a subset of relevant columns
+  select(location_id, m_to_a1, m_to_l_airp, m_to_truck, m_to_bus, longitude.y, latitude.y, m_to_l_port, tl_s00500, bus_s00500, pop10_s01500, blockgroup_key.y)
+
+
+#rename native_id to match annual for join and select covariates of interest
+ej_screen_s <- ej_screen %>%
+  dplyr::select(blockgroup_key.y = ID, DEMOGIDX_2, DEMOGIDX_5)
+
+#join
+seattle_block<- left_join(seattle_block, ej_screen_s, by="blockgroup_key.y")
+
+```
+
+```{r set no2 data and model formula, include = FALSE, echo = FALSE}
+annual_no2 <- annual %>%
+  filter(variable == "no2") %>%
+  # select a subset of relevant columns
+  select(location, variable, value, m_to_a1, m_to_l_airp, m_to_truck, m_to_bus, longitude, latitude, m_to_l_port, tl_s00500, bus_s00500, pop10_s01500)
+
+#set model formula
+frml <- as.formula( value ~ m_to_a1 + m_to_l_airp + m_to_truck + m_to_bus + m_to_l_port + tl_s00500 + bus_s00500 + pop10_s01500)
+```
+
+```{r convert annual to sf object, include = FALSE, echo = FALSE}
+# Convert to sf object, specifying coordinate reference system (CRS) this is for grid stuff
+annual_sf <- st_as_sf(annual_no2, coords = c('longitude', 'latitude'), crs = latlong_proj) %>%
+  # convert to a meters CRS
+ st_transform(lambert_proj)
+
+```
+
+
+```{r convert block, include = FALSE, echo = FALSE}
+#----- Convert block to sf -----
+
+# Check initial class
+class(seattle_block)
+
+
+# Filter out rows with -Inf in D2A1, remove redundant lambert columns, and convert to sf
+seattle_block <- seattle_block %>%
+  filter(m_to_a1 != -Inf) %>%
+  st_as_sf(coords = c('longitude.y', 'latitude.y'), crs = latlong_proj) 
+
+seattle_grid <- seattle_grid %>%
+  filter(m_to_a1 != -Inf) %>%
+  st_as_sf(coords = c('longitude.y', 'latitude.y'), crs = latlong_proj)  
+
+# summary of the converted object
+#head(la_grid)
+
+# Download the land polygon data as an sf multipolygon
+# the CRS for this is in lat/long degrees
+land <- suppressMessages(ne_download(scale = "large", type = "land", category = "physical", returnclass = "sf"))
+
+# Crop the land area to the bounding box of the seattle block to reduce processing time
+# have to convert the seattle block to the same degrees as seattle
+land <- suppressWarnings(st_crop(land, st_bbox(seattle_grid)))  
+
+# Visualize cropped land area (optional)
+ggplot(land) + geom_sf()
+
+# Filter seattle_grid to keep only points that intersect with land
+seattle_block <- seattle_block[st_within(seattle_block, land) %>% lengths() > 0,]
+
+# Visualize grid land locations (zoom in)
+ggplot(seattle_block) + geom_sf(size=0.001)
+
+```
+## Seattle Grid
+
+A map of Seattle was created to visualize NO₂ concentrations using OpenStreetMap tiles. NO₂ levels were represented by a color gradient, with higher concentrations observed in areas likely influenced by traffic and industrial activities. The map provided a clear spatial representation of the variability in NO₂ levels, with additional context from a bounding box, scale bar, and north arrow. These visualizations revealed localized patterns of higher NO₂ concentrations and established a basis for further investigation into spatial and demographic disparities.
+
+```{r Seattle map setup, echo = FALSE}
+# ---- Seattle Map Setup ----
+# Define a bounding box (min & max X and Y) with a 10,000m buffer around `seattle_grid`
+map_bbox <- seattle_grid %>%
+  # convert from degrees to meters
+  st_transform(crs = lambert_proj) %>%
+  # add a buffer around the area for visualization purposes
+  st_buffer(dist = 10000) %>%
+  # convert back to original CRS
+  st_transform(crs = latlong_proj) %>%
+  # take the min/max X/Y
+  st_bbox()
+
+# Base map setup with ggplot2 and ggspatial using OSM tiles
+g <- ggplot() +
+  ggspatial::annotation_map_tile(type = "osm", zoom = 10) +
+  labs(title = "Seattle Grid with Map") +
+  theme_minimal()
+
+# Add NOx data (transformed to original scale) with additional map elements
+g + 
+  geom_sf(data = annual_sf, aes(color = value)) + 
+  scale_color_viridis_c() +  # Color-blind friendly scale
+  theme_void() +  # Clean layout for map aesthetics
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, size = 1)
+  ) + 
+  ggspatial::annotation_scale(location = "bl", width_hint = 0.3, unit_category = "imperial") +  # Scale in miles
+  ggspatial::annotation_north_arrow(location = "tr", which_north = "true", style = north_arrow_fancy_orienteering) +  # North arrow
+  labs(title = "Map of Seattle with\nAnnual NO2 Data",
+       col="NO2 (ppb)"
+       )
+```
+
+
+```{r convert datasets to meter CRS, include = FALSE, echo = FALSE}
+annual_sf <- st_transform(annual_sf, crs = lambert_proj) 
+
+seattle_block <- st_transform(seattle_block, crs = lambert_proj) 
+```
+## Semi-Variogram Cloud
+The semi-variogram cloud shows the relationship between semi-variance and spatial distance, with the smoothed red curve indicating the overall trend. Semi-variance increases gradually with distance, suggesting moderate spatial autocorrelation in NO₂ levels. While there is variability in the individual data points, the smoothed curve provides a stable basis for fitting a variogram model, which is essential for Universal Kriging. The relatively flat trend at larger distances suggests the range of spatial dependence is limited.
+
+```{r empirical variogram of no2, echo=FALSE, include = FALSE}
+# ---- Empirical Variogram Plots ----
+
+# Variogram Cloud
+vgm_emp <- variogram(value ~ 1, annual_sf, cloud = TRUE)
+
+#ggplot(vgm_emp, aes(x = dist, y = gamma)) + 
+ # geom_point(alpha = 0.1) + 
+ # labs(x = "Distance (meters)") + 
+ # xlim(0, max(vgm_emp$dist) * 2)
+
+ggplot(data = vgm_emp, aes(x = dist, y = gamma)) +
+  geom_point(shape = 1, alpha = 0.6) +
+  geom_smooth(se = FALSE, color = "red", linetype = "solid",
+              method = "loess", 
+              span = .8
+              ) +
+  labs(x = "Distance (meters)", 
+       y = "Semi-variance",
+       title = "Semi-variogram Cloud with Smoothed Curve") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(0, max(vgm_emp$dist))
+```
+## Fitted UK Variogram
+
+The variogram model fitted for Universal Kriging includes a Spherical structure with a partial sill (psill) of 2.75 and a range of approximately 2998 meters, indicating the distance over which spatial autocorrelation is present. A nugget effect of 0.17 reflects small-scale variability or measurement error. The fitted model curve aligns well with the empirical variogram, capturing the spatial dependence in NO₂ levels. The range suggests that spatial correlation diminishes significantly beyond approximately 3 km, supporting the suitability of the model for localized predictions.
+
+```{r Universal Kriging, echo = FALSE}
+# ---- Universal Kriging ----
+
+# Estimate the variogram with a covariate predictor
+v.uk <- variogram(frml, 
+                  annual_sf
+                  )
+
+# Fit the variogram model with multiple options (Exponential, Spherical, Matern)
+# note that this may have convergence issues. If so, you can try selecting one variogram model instead. You can also give it initial values for range, nugget etc. based on looking at the variogram cloud.
+
+# sometimes has convergence issues 
+m.uk <- fit.variogram(v.uk, vgm(c("Exp", "Sph", "Mat")))
+
+# Alternatively, you could fit the variogram with modified initial values.
+
+
+# Display the selected variogram model parameters
+# m.uk
+
+# Plot the empirical variogram with the fitted model
+uk.v.plot <- plot(v.uk, model = m.uk, main = "Universal Kriging", xlab = " ", ylab = " ")
+uk.v.plot
+
+```
+
+## UK Predictions
+
+The kriging model incorporated covariates and fitted predictions (var1.pred) along with associated uncertainties derived from the kriging variance (standard errors). The spatial predictions and their uncertainties were visualized, showing the spatial variability of NO₂ concentrations.
+
+Cross-validation was conducted to evaluate the model, using both 5-fold and leave-one-out (LOO) methods. Predictions at block centroids were validated to ensure alignment, and the final results confirmed that the prediction coordinates successfully matched the block-level spatial data. The kriging results provide a foundation for further spatial analysis of NO₂ levels.
+
+```{r universal kriging prediction, echo=FALSE, message=FALSE, include = FALSE}
+# ---- Universal Kriging Prediction ----
+
+# Fit the universal kriging model and predict to the blocks
+invisible(capture.output({no2.kr <- suppressMessages(krige(frml, 
+                 annual_sf, # CRS in meters
+                 newdata = seattle_block, # CRS in meters
+                 model = m.uk))
+}))
+
+# Calculate standard errors to assess prediction uncertainty across locations
+no2.kr$se <- sqrt(no2.kr$var1.var)  # Standard error is the square root of variance
+
+# Plot UK predictions
+pl3 <- plot(no2.kr["var1.pred"], main = "UK Prediction of NO2")
+
+# Plot UK prediction standard errors
+pl4 <- plot(no2.kr["se"], main = "UK Prediction Error (Standard Error)")
+```
+
+```{r set functions for cross validation, echo=FALSE, message=FALSE, include = FALSE}
+# ---- Define Cross-Validation Functions ----
+
+# Wrapper function krige.cv2() to retain the projection of the sf object.
+# This fixes a known bug in krige.cv() where projection information is lost.
+# (Bug reported and fixed on GitHub, but this wrapper may be required for now.)
+krige.cv2 <- function(formula, locations, model = NULL, ..., beta = NULL, 
+                      nmax = Inf, nmin = 0, maxdist = Inf, 
+                      nfold = nrow(locations),  # default is leave-one-out
+                      verbose = interactive(), 
+                      debug.level = 0) {
+  
+  # Perform cross-validation and retain projection if it's missing
+  krige.cv1 <- krige.cv(formula = formula, locations = locations, model = model, ..., 
+                        beta = beta, nmax = nmax, nmin = nmin, maxdist = maxdist, 
+                        nfold = nfold, verbose = verbose, debug.level = debug.level)
+  
+  # Set projection from input data if krige.cv output lacks it
+  if (is.na(st_crs(krige.cv1))) {
+    st_crs(krige.cv1) <- st_crs(locations)
+  }
+  return(krige.cv1)
+}
+
+# Function to create a bubble plot for kriging residuals
+krige.cv.bubble <- function(cv.out, plot_title) {
+  ggplot(data = cv.out) +
+    geom_sf(aes(size = abs(residual), color = factor(residual > 0)), alpha = 0.5) +
+    scale_color_discrete(name = 'Residual > 0', direction = -1) +
+    scale_size_continuous(name = '|Residual|') +
+    ggtitle(plot_title) +
+    theme_bw()
+}
+
+# Function to calculate performance metrics: RMSE and R²
+krige.cv.stats <- function(krige.cv.output, description) {
+  d <- krige.cv.output
+  
+  # Calculate Mean Squared Error (MSE) and R²
+  mean_observed <- mean(d$observed)
+  MSE_pred <- mean((d$observed - d$var1.pred)^2)
+  MSE_obs <- mean((d$observed - mean_observed)^2)
+  
+  # Create a summary table with rounded RMSE and MSE-based R²
+  tibble(
+    Description = description, 
+    RMSE = round(sqrt(MSE_pred), 4), 
+    MSE_based_R2 = round(max(1 - MSE_pred / MSE_obs, 0), 4)
+  )
+}
+```
+
+```{r UK cross validation, echo=FALSE, message=FALSE, include = FALSE}
+# ---- Cross-Validation ----
+
+# Perform Universal Kriging (UK) with 5-fold Cross-Validation
+cv5uk <- krige.cv2(frml,
+                   annual_sf, 
+                   model = m.uk, 
+                   nfold = 5)
+
+# Perform Universal Kriging (UK) with Leave-One-Out Cross-Validation (LOOCV)
+cvLOOuk <- krige.cv2(frml,
+                     annual_sf, 
+                     model = m.uk
+                     )
+```
+
+```{r krige in seattle, echo=FALSE, include=FALSE, message=FALSE}
+# ----- Krige in seattle -----
+
+kc_s <- suppressMessages(krige(
+  # Mean model with covariates
+frml,
+  annual_sf, # CRS in meters
+  newdata = seattle_block, # CRS in meters
+  model = m.uk # Use fitted UK variogram model
+))
+
+# View the results; predictions are stored in `var1.pred`
+#kc_s$var1.pred
+```
+
+```{r visualize the predictions, echo=FALSE, message=FALSE, include = FALSE}
+seattle_block <- st_transform(seattle_block, latlong_proj)
+kc_s <- st_transform(kc_s, latlong_proj)
+
+# ----- Plot the Grid Predictions on the Map -----
+
+# Verify that coordinates in `kc_s` and `seattle_block` are nearly identical
+# Floating-point precision can cause slight differences, so `all.equal()`, allows for small tolerance levels in comparison, is used instead of `identical()`.
+all.equal(st_coordinates(kc_s), st_coordinates(seattle_block))  # Expected result: "TRUE" or a message with small differences
+
+# Join Seattle grid to predictions; do so by nearest feature to avoid precision merging issues
+new_grid <- st_join(seattle_block, kc_s, join = st_nearest_feature)
+
+
+# Transform predictions from log scale back to the native scale
+new_grid <- new_grid %>% rename(NO2 = var1.pred)
+
+# Verify the join was successful (no NAs in predictions)
+all(!is.na(new_grid$var1.pred))  # Should return "TRUE"
+```
+## Gridded Prediction Map
+
+The Universal Kriging (UK) predictions for NO₂ concentrations were visualized as a smoothed map overlaying the Seattle study area. The predicted values were plotted on a grid using a color gradient (plasma scale) to represent the spatial distribution of NO₂. The map extent was set using the bounding box of the Seattle grid, ensuring accurate spatial alignment. Higher NO₂ concentrations were indicated by warmer colors, while lower concentrations were represented by cooler colors.
+
+The visualization provides a detailed spatial representation of the predicted NO₂ levels, highlighting areas with higher exposure.
+
+```{r plot smooth gridded predictions, echo = FALSE}
+# ----- Plot Smooth Gridded Predictions -----
+
+# Convert `new_grid` to a data frame for easier plotting 
+new_grid_df <- as.data.frame(st_coordinates(new_grid))
+new_grid_df$NO2 <- new_grid$NO2
+
+
+g + 
+  # Set map extent and CRS (bounding box error otherwise results in no background map) 
+  coord_sf(xlim = c(map_bbox["xmin"], map_bbox["xmax"]), 
+           ylim = c(map_bbox["ymin"], map_bbox["ymax"]), 
+           crs = 4326) +  
+  geom_tile(data = new_grid_df, aes(x = X, y = Y, fill = NO2), 
+            alpha=0.2,
+            width = 0.01, height = 0.01 # Adjust width and height as needed
+            ) +  
+  # color friendly color scale
+  scale_fill_viridis_c(option = "plasma") + 
+  labs(title = "Map of Seattle with Annual UK Predictions to Centroids",
+       col="NO2 (ppb)"
+       ) +
+  theme_minimal()
+
+```
+ 
+```{r, include = FALSE, echo = FALSE}
+regress_di <-  lm(NO2 ~ DEMOGIDX_2, data = new_grid, echo=FALSE, message=FALSE, include = FALSE)
+#If we want to do more with the regress besides showing it below in the figure than we can keep this chunk. if not we can get rid of
+```
+
+```{r scatter plot of demographic index with no2, echo=FALSE, message=FALSE, include = FALSE}
+scatter1 <- ggplot(new_grid, aes(x = DEMOGIDX_2, y = NO2)) +
+  geom_point(size = 1, color = "blue") +
+  labs(x = "Demographic Index", y = "NO2 (ppb)") +
+ scale_y_continuous(limits = c(min(new_grid$NO2, na.rm = TRUE), max(new_grid$NO2, na.rm = TRUE))) +
+  scale_x_continuous(limits = c(min(new_grid$DEMOGIDX_2, na.rm = TRUE), max(new_grid$DEMOGIDX_2, na.rm = TRUE))) +
+  #adding a linear regression association line
+   geom_smooth(method = "lm", se = FALSE)
+
+scatter1
+
+```
+```{r scatter plot of supplemental demographic index with no2, echo=FALSE, message=FALSE, include = FALSE}
+scatter2 <- ggplot(new_grid, aes(x = DEMOGIDX_5, y = NO2)) +
+  geom_point(size = 1, color = "lightblue") +
+  labs(x = "Supplemental Demographic Index", y = " ") +
+ scale_y_continuous(limits = c(min(new_grid$NO2, na.rm = TRUE), max(new_grid$NO2, na.rm = TRUE))) +
+  scale_x_continuous(limits = c(min(new_grid$DEMOGIDX_5, na.rm = TRUE), max(new_grid$DEMOGIDX_5, na.rm = TRUE))) +
+  #adding a linear regression association line
+   geom_smooth(method = "lm", se = FALSE)
+
+scatter2
+
+```
+
+## NO2 & SES Indices Scatterplots
+
+The scatterplots show a positive association between NO₂ concentrations and both the Demographic Index (left) and Supplemental Demographic Index (right). As the values of these indices increase, indicating greater demographic vulnerability, NO₂ levels also tend to rise. The trend lines confirm this relationship, suggesting that areas with higher demographic index scores are associated with elevated NO₂ levels.
+
+```{r, echo = FALSE}
+grid.arrange(scatter1, scatter2, ncol = 2
+            )
+```
+## Model Validation
+
+The Universal Kriging model for NO₂ prediction demonstrated good performance during cross-validation. The 5-fold cross-validation yielded a root mean square error (RMSE) of 1.31 ppb and an R² value of 0.751, while the leave-one-out cross-validation (LOO CV) showed slightly better performance, with an RMSE of 1.24 ppb and an R² of 0.776. These results indicate that the model captures a significant portion of the variability in NO₂ concentrations while maintaining relatively low prediction error.
+
+```{r get mse of lur, echo = FALSE}
+# now check the results from the CV function
+# Summarize with get_MSE
+cv.table <- bind_rows(
+  krige.cv.stats(cv5uk, "UK: 5-Fold CV"),
+  krige.cv.stats(cvLOOuk, "UK: LOO CV"),
+) %>% 
+  kable(caption = "Summary of Model Cross-Validation Results for NO2")
+#FIXME not showing as a kable table
+
+cv.table
+```
 
 # Discussion
+
+This study examined the relationship between nitrogen dioxide (NO₂) concentrations and socioeconomic status (SES) across census tracts in Seattle, utilizing demographic indices (DEMOGIDX_2 and DEMOGIDX_5) as proxies for SES. The analysis revealed a positive association between NO₂ levels and SES indices, suggesting that census tracts characterized by higher demographic vulnerability, as indicated by higher index scores, experience elevated NO₂ concentrations. This aligns with the hypothesis that populations with lower SES are disproportionately exposed to traffic-related air pollution.
+
+The Universal Kriging (UK) model demonstrated strong predictive accuracy, with cross-validation results yielding root mean square error (RMSE) values of 1.31 ppb (5-fold validation) and 1.24 ppb (leave-one-out validation). R² values exceeding 0.75 indicate the model effectively captured spatial variability in NO₂ levels while incorporating geographic covariates such as proximity to roadways, truck routes, and population density. These results underscore the utility of spatial modeling in assessing air pollution exposure.
+
+Visualization of UK predictions highlighted spatial patterns of NO₂ concentrations, with higher levels observed in areas of higher demographic vulnerability. Scatter plots further confirmed the positive correlation between SES indices and predicted NO₂ levels. These findings suggest that environmental and socioeconomic factors are interlinked, with implications for public health and urban planning. The identification of hotspots with high NO₂ exposure provides a basis for targeted interventions and policy actions to reduce environmental disparities.
+
+The study’s integration of high-resolution pollution data with demographic indices offers a robust approach for assessing environmental justice concerns. However, further research is needed to investigate temporal trends, additional pollutants such as Black Carbon, and health outcomes associated with exposure.
+
+# Conclusion
+
+This study identified a positive association between NO₂ concentrations and demographic vulnerability, with higher levels observed in census tracts characterized by lower socioeconomic status (SES). The Universal Kriging model effectively predicted spatial patterns of NO₂, revealing hotspots of elevated exposure in vulnerable areas.
+
+# Disclosure
+
+This project utilized OpenAI's ChatGPT model for assistance in developing, condensing, and refining the language used in the results and discussion sections. The initial laboratory code was written and submitted as part of assignments throughout the quarter and later adapted for use in this project. The AI model was specifically employed to help streamline and clarify the presentation of findings, ensure consistency, and enhance readability. All analyses, interpretations, and conclusions were independently derived based on the project data and research objectives.
+
+# References
+
+[@blanco_characterization_2022]
+
+# Code Appendix
+
+## Session Information
+
+```{r session.info}
+#-----session info: beginning of Code Appendix-----
+
+sessionInfo()
+
+```
+
+## Code in the R Markdown file
+
+```{r appendix.code, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60), include=T}
+#-----appendix code-----
+
+```
+
+## User-written functions loaded in the R Markdown environment
+
+```{r functions.used.in.this.Rmd, eval = TRUE}
+#-----functions used in this Rmd-----
+
+# Show the names of all functions used (loaded in the current environment)
+lsf.str()
+
+# Show the definitions of all functions loaded into the current environment  
+lsf.str() %>% set_names() %>% map(get, .GlobalEnv)
+
+```
