@@ -23,10 +23,10 @@ This document was rendered on `r format(Sys.time(), '%B %d, %Y')`.
 # Introduction
 
 ## Purpose
-The purpose of this term project for ENV H 556 is to investigate the relationship between air pollution levels and socioeconomic status (SES) in Washington State. Specifically, the study aims to assess whether concentrations of nitrogen dioxide (NO₂) and Black Carbon (BC) are higher in census tracts characterized by low SES, as identified by the Washington State Department of Health Environmental Justice Screening Tool. By analyzing this relationship, the project seeks to provide insights into potential environmental injustices and disparities in pollution exposure, contributing to a broader understanding of how social determinants of health intersect with environmental factors.
+The purpose of this term project for ENV H 556 is to investigate the relationship between air pollution levels and socioeconomic status (SES) in Washington State. Specifically, the study aims to assess whether concentrations of nitrogen dioxide (NO₂) are higher in census tracts characterized by low SES, as identified by the Washington State Department of Health Environmental Justice Screening Tool. By analyzing this relationship, the project seeks to provide insights into potential environmental injustices and disparities in pollution exposure, contributing to a broader understanding of how social determinants of health intersect with environmental factors.
 
 ## Scientific Importance
-Nitrogen dioxide (NO₂) and Black Carbon (BC) are well-documented air pollutants linked to adverse health outcomes, including respiratory and cardiovascular diseases (citation). By examining their concentrations in relation to SES using the Washington State Department of Health Environmental Justice Screening Tool, this research contributes to the growing body of evidence on environmental health disparities.
+Nitrogen dioxide (NO₂) and Black Carbon (BC) are well-documented air pollutants linked to adverse health outcomes, including respiratory and cardiovascular diseases [@dominski_effects_2021]. By examining their concentrations in relation to SES using the Washington State Department of Health Environmental Justice Screening Tool, this research contributes to the growing body of evidence on environmental health disparities.
 
 The findings of this study provide implications for public health policies, urban planning, and environmental regulations. Identifying patterns of unequal exposure can inform targeted interventions to mitigate health risks in vulnerable populations and promote equitable environmental policies.
 
@@ -35,7 +35,7 @@ The findings of this study provide implications for public health policies, urba
 Are levels of NO₂ air pollution higher in census tracts characterized by low socioeconomic status (SES) as identified by the Washington State Department of Health (DOH) Environmental Justice Screening Tool?
 
 ## Hypothesis
-NO₂ concentrations are significantly higher in census tracts with low socioeconomic status as defined by the Washington DOH Environmental Justice Screening Tool.
+NO₂ concentrations are higher in census tracts with low socioeconomic status as defined by the Washington DOH Environmental Justice Screening Tool.
 
 # Data Source(s)
 This study integrates air pollution data from the Adult Changes in Thought Traffic-Related Air Pollution (ACT-TRAP) Seattle mobile monitoring study and socioeconomic status (SES) data from the Washington State Department of Health (DOH) Environmental Health Disparities (EHD) Map. Below is an overview of each dataset.
@@ -53,7 +53,7 @@ To determine SES, the Washington DOH combined and weighted these variables to cr
 # Methodology
 
 ## Geographic Covariates
-The selection of covariates for this study was guided by their relevance to understanding and predicting air pollution exposure in relation to socioeconomic status (SES). The chosen covariates reflect various geographic, demographic, and infrastructural factors that are known to influence traffic-related air pollution (TRAP).
+The selection of covariates for this study was guided by their relevance to understanding and predicting air pollution exposure in relation to socioeconomic status (SES) [@blanco_characterization_2022]. The chosen covariates reflect various geographic, demographic, and infrastructural factors that are known to influence traffic-related air pollution (TRAP).
 
 - **M_to_a1:** This variable measures the distance to A1 roadways (major highways), which are significant sources of nitrogen dioxide (NO₂) and Black Carbon (BC) emissions due to high traffic volumes.
 
@@ -70,13 +70,27 @@ The selection of covariates for this study was guided by their relevance to unde
 - **pop10_s1500:** This variable represents population density within a 1,500-meter radius, derived from 2010 Census data.
 
 ## Methods
-Nitrogen dioxide (NO₂) levels were characterized using descriptive statistics, including mean, standard deviation, geometric mean, and measures of missing data, to assess their distributions. Transformations, such as logarithmic scaling, were applied where appropriate to meet model assumptions and improve prediction accuracy. Data were sourced from annual pollutant measurements, mobile covariates, and census block and grid-based datasets, which included key geographic covariates (e.g., proximity to roadways, truck routes, bus routes, ports, and airports) and demographic indices (e.g., population density, traffic load, and environmental justice metrics). These covariates were selected based on established associations with traffic-related air pollution (TRAP).
 
-Pollutant levels were predicted using Universal Kriging (UK), a geostatistical method that incorporates spatial dependence and covariates. Spatial structure was assessed through variogram modeling, and best-fit models were identified. Predictions were generated at census block centroids and visualized on OpenStreetMap tiles to align predictions with population exposure at a local scale. Prediction uncertainties were quantified through standard error estimation.
+Nitrogen dioxide (NO₂) levels were characterized using descriptive statistics, including mean, standard deviation, geometric mean, and measures of missing data, to assess their distributions. Data were sourced from annual pollutant measurements, mobile covariates, and census block and grid-based datasets. These datasets included key geographic covariates (e.g., proximity to roadways, truck routes, bus routes, ports, and airports) and demographic indices (e.g., population density, traffic load, and environmental justice metrics) selected based on established associations with traffic-related air pollution (TRAP).
 
-Model performance was validated using cross-validation methods, including 5-fold cross-validation and leave-one-out cross-validation (LOO). Metrics such as root mean square error (RMSE) and R² were used to evaluate prediction accuracy. Socioeconomic data, sourced from EPA EJSCREEN, provided demographic indices (DEMOGIDX_2 and DEMOGIDX_5) for further analysis.
+Universal Kriging (UK), a geostatistical method incorporating spatial dependence and covariates, was used to predict pollutant levels. Spatial structure was assessed through variogram modeling, and best-fit models were identified. Predictions were generated at census block centroids and visualized on OpenStreetMap tiles to align predictions with population exposure at a local scale. Prediction uncertainties were quantified through standard error estimation.
 
-Relationships between NO₂ predictions and socioeconomic indices were examined using scatter plots with regression lines. Predicted pollutant levels were visualized on choropleth maps, overlaid with socioeconomic indices to explore spatial and demographic patterns.
+Model performance was validated using cross-validation methods, including 5-fold cross-validation and leave-one-out cross-validation (LOO). Metrics such as root mean square error (RMSE) and R² were used to evaluate prediction accuracy.
+Socioeconomic data, sourced from EPA EJSCREEN, provided demographic indices (DEMOGIDX_2 and DEMOGIDX_5) for further analysis. Relationships between NO₂ predictions and socioeconomic indices were examined using scatter plots with regression lines. Predicted pollutant levels were visualized on choropleth maps, overlaid with socioeconomic indices to explore spatial and demographic patterns
+
+### Site Data Treatment
+
+Differences in pollutant concentrations between collocation and normal sites were observed in the descriptive analysis. However, the number of collocation sites was too limited to justify splitting the data based on site type for kriging. Consequently, all measurements were aggregated, and predictions were made using the combined dataset to maintain sufficient spatial coverage and model robustness.
+
+### Universal Kriging Setup
+
+The spatial distribution of NO₂ concentrations across Seattle was analyzed using Universal Kriging. Key geographic covariates, including proximity to major roads, airports, truck routes, and bus stops, as well as population density and traffic load, were incorporated into the model. Demographic indices (DEMOGIDX_2 and DEMOGIDX_5) were also included to assess potential associations between NO₂ levels and socioeconomic factors. Spatial data were transformed into appropriate coordinate reference systems, and only land areas were retained to focus on populated regions. This setup enabled the kriging model to account for spatial dependence and covariates, facilitating accurate prediction of NO₂ levels.
+
+### UK Predictions
+
+The kriging model incorporated covariates and fitted predictions (var1.pred) along with associated uncertainties derived from the kriging variance (standard errors). The spatial predictions and their uncertainties were visualized, showing the spatial variability of NO₂ concentrations.
+
+Cross-validation was conducted to evaluate the model, using both 5-fold and leave-one-out (LOO) methods. Predictions at block centroids were validated to ensure alignment, and the final results confirmed that the prediction coordinates successfully matched the block-level spatial data. The kriging results provide a foundation for further spatial analysis of NO₂ levels.
 
 # Results
 ```{r setup, echo = FALSE, include = FALSE}
@@ -237,67 +251,9 @@ annual_sites <- annual %>%
   )
 ```
 
-## Descriptive Statistics
+## NO2 Distribution
 
-Nitrogen dioxide (NO₂) levels were higher at collocation sites compared to normal sites. The arithmetic mean NO₂ concentration was 15.05 ppb at collocation sites, with a standard deviation of 4.92 ppb, while normal sites had a lower arithmetic mean of 9.15 ppb and a standard deviation of 2.47 ppb. The geometric mean NO₂ concentration was 14.47 ppb for collocation sites and 8.85 ppb for normal sites, with geometric standard deviations of 1.36 and 1.29, respectively. These results indicate higher variability and concentrations of NO₂ at collocation sites compared to normal sites.
-```{r make a summary table, echo=TRUE, include = FALSE}
-#-----table with dplyr------
-annual_summary <- annual_sites %>% 
-  group_by(variable, site_named) %>% 
-  summarise(,
-            Arithmetic_Mean = mean(value, na.rm = TRUE),
-            Arithmetic_SD = sd(value, na.rm = TRUE),
-            Geo_Mean = geoMean(value, na.rm = TRUE),
-            Geo_SD = geoSD(value, na.rm = TRUE),
-        
-            )
-
-
-# And here is the same result printed using kable
-kable(annual_summary,
-      # only show 2 digits
-      digits = 2)
-
-```
-
-The distribution of NO₂ measurements closely approximates normality, as indicated by the alignment between the kernel density estimate (KDE) and the normal distribution curve, despite minor deviations in the tail. The mean NO₂ concentration, marked by the vertical dotted line, aligns well with the center of the distribution. As the deviations were minimal, no logarithmic transformation was applied for further analysis.
-
-```{r histogram of no2, warning=FALSE, message=FALSE, include = FALSE}
-#-----Make a histogram of no2 measurements-----------
-
-# Calculate the mean and standard deviation of the 'value' column
-mean_value_no2 <- mean(annual$value[annual$variable == "no2"], na.rm = TRUE)
-sd_value_no2 <- sd(annual$value[annual$variable == "no2"], na.rm = TRUE)
-
-# Create the density plot with the normal distribution overlay
-# The purple line is a kernel density estimate representing the true shape of your data, while the red dashed line assumes a perfect normal distribution with the same mean and standard deviation.
-
-p_no2 <- annual %>%
-  filter(variable == "no2") %>%
-  ggplot(aes(x = value)) +
-  # Add the density curve with some transparency
-  geom_density(alpha = 0.5, color = "purple") +
-  # Add the normal distribution curve using stat_function
-  stat_function(fun = dnorm, args = list(mean = mean_value_no2, sd = sd_value_no2),
-                color = "red", size = 1, linetype = "dashed") +
-  geom_vline(xintercept = mean_value_no2, linetype = "dotted") +
-  theme_classic() + 
-  #  a few style options, such as axis expansion so the bars aren't "floating" and an overall theme.
-  scale_y_continuous(expand = expand_scale(mult = c(0, .1))) + 
-  #add x label
-  xlab("Measurement (ppb)") +
-  #add title and blanking the y axis for readability later
-  labs(title = "NO2", y = " ")
-
-
-# Display the plot
-p_no2
-
-```
-
-## Universal Kriging Setup
-
-The spatial distribution of NO₂ concentrations across Seattle was analyzed using Universal Kriging. Key geographic covariates, including proximity to major roads, airports, truck routes, and bus stops, as well as population density and traffic load, were incorporated into the model. Demographic indices (DEMOGIDX_2 and DEMOGIDX_5) were also included to assess potential associations between NO₂ levels and socioeconomic factors. Spatial data were transformed into appropriate coordinate reference systems, and only land areas were retained to focus on populated regions. This setup enabled the kriging model to account for spatial dependence and covariates, facilitating accurate prediction of NO₂ levels.
+The distribution of NO₂ measurements closely approximates normality, as indicated by the alignment between the kernel density estimate (KDE) and the normal distribution curve, despite minor deviations in the tail (Appendix Figure 1). The mean NO₂ concentration, marked by the vertical dotted line, aligns well with the center of the distribution. As the deviations were minimal, no logarithmic transformation was applied for further analysis.
 
 ```{r define coordinate systems, include = FALSE, echo = FALSE}
 
@@ -399,7 +355,9 @@ ggplot(seattle_block) + geom_sf(size=0.001)
 ```
 ## Seattle Grid
 
-A map of Seattle was created to visualize NO₂ concentrations using OpenStreetMap tiles. NO₂ levels were represented by a color gradient, with higher concentrations observed in areas likely influenced by traffic and industrial activities. The map provided a clear spatial representation of the variability in NO₂ levels, with additional context from a bounding box, scale bar, and north arrow. These visualizations revealed localized patterns of higher NO₂ concentrations and established a basis for further investigation into spatial and demographic disparities.
+The map provided a clear spatial representation of the variability in NO₂ levels, with additional context from a bounding box, scale bar, and north arrow. These visualizations revealed localized patterns of higher NO₂ concentrations and established a basis for further investigation into spatial and demographic disparities (Figure 2).
+
+**Figure 1: Seattle NO2 Grid Map**
 
 ```{r Seattle map setup, echo = FALSE}
 # ---- Seattle Map Setup ----
@@ -441,37 +399,12 @@ annual_sf <- st_transform(annual_sf, crs = lambert_proj)
 
 seattle_block <- st_transform(seattle_block, crs = lambert_proj) 
 ```
-## Semi-Variogram Cloud
-The semi-variogram cloud shows the relationship between semi-variance and spatial distance, with the smoothed red curve indicating the overall trend. Semi-variance increases gradually with distance, suggesting moderate spatial autocorrelation in NO₂ levels. While there is variability in the individual data points, the smoothed curve provides a stable basis for fitting a variogram model, which is essential for Universal Kriging. The relatively flat trend at larger distances suggests the range of spatial dependence is limited.
 
-```{r empirical variogram of no2, echo=FALSE, include = FALSE}
-# ---- Empirical Variogram Plots ----
-
-# Variogram Cloud
-vgm_emp <- variogram(value ~ 1, annual_sf, cloud = TRUE)
-
-#ggplot(vgm_emp, aes(x = dist, y = gamma)) + 
- # geom_point(alpha = 0.1) + 
- # labs(x = "Distance (meters)") + 
- # xlim(0, max(vgm_emp$dist) * 2)
-
-ggplot(data = vgm_emp, aes(x = dist, y = gamma)) +
-  geom_point(shape = 1, alpha = 0.6) +
-  geom_smooth(se = FALSE, color = "red", linetype = "solid",
-              method = "loess", 
-              span = .8
-              ) +
-  labs(x = "Distance (meters)", 
-       y = "Semi-variance",
-       title = "Semi-variogram Cloud with Smoothed Curve") +
-  theme_bw() +
-  theme(legend.position = "none") +
-  xlim(0, max(vgm_emp$dist))
-```
 ## Fitted UK Variogram
 
-The variogram model fitted for Universal Kriging includes a Spherical structure with a partial sill (psill) of 2.75 and a range of approximately 2998 meters, indicating the distance over which spatial autocorrelation is present. A nugget effect of 0.17 reflects small-scale variability or measurement error. The fitted model curve aligns well with the empirical variogram, capturing the spatial dependence in NO₂ levels. The range suggests that spatial correlation diminishes significantly beyond approximately 3 km, supporting the suitability of the model for localized predictions.
+The variogram model fitted for Universal Kriging includes a Spherical structure with a partial sill (psill) of 2.75 and a range of approximately 2998 meters, indicating the distance over which spatial autocorrelation is present. A nugget effect of 0.17 reflects small-scale variability or measurement error. The fitted model curve aligns well with the empirical variogram, capturing the spatial dependence in NO₂ levels (figure 3). The range suggests that spatial correlation diminishes significantly beyond approximately 3 km, supporting the suitability of the model for localized predictions.
 
+**Figure 2: Fitted UK  NO2-Variogram**
 ```{r Universal Kriging, echo = FALSE}
 # ---- Universal Kriging ----
 
@@ -497,12 +430,6 @@ uk.v.plot <- plot(v.uk, model = m.uk, main = "Universal Kriging", xlab = " ", yl
 uk.v.plot
 
 ```
-
-## UK Predictions
-
-The kriging model incorporated covariates and fitted predictions (var1.pred) along with associated uncertainties derived from the kriging variance (standard errors). The spatial predictions and their uncertainties were visualized, showing the spatial variability of NO₂ concentrations.
-
-Cross-validation was conducted to evaluate the model, using both 5-fold and leave-one-out (LOO) methods. Predictions at block centroids were validated to ensure alignment, and the final results confirmed that the prediction coordinates successfully matched the block-level spatial data. The kriging results provide a foundation for further spatial analysis of NO₂ levels.
 
 ```{r universal kriging prediction, echo=FALSE, message=FALSE, include = FALSE}
 # ---- Universal Kriging Prediction ----
@@ -633,6 +560,7 @@ The Universal Kriging (UK) predictions for NO₂ concentrations were visualized 
 
 The visualization provides a detailed spatial representation of the predicted NO₂ levels, highlighting areas with higher exposure.
 
+**Figure 3: Annual UK Predictions to Centroids**
 ```{r plot smooth gridded predictions, echo = FALSE}
 # ----- Plot Smooth Gridded Predictions -----
 
@@ -693,6 +621,7 @@ scatter2
 
 The scatterplots show a positive association between NO₂ concentrations and both the Demographic Index (left) and Supplemental Demographic Index (right). As the values of these indices increase, indicating greater demographic vulnerability, NO₂ levels also tend to rise. The trend lines confirm this relationship, suggesting that areas with higher demographic index scores are associated with elevated NO₂ levels.
 
+**Figure 4: NO2 & SES Indices Scatterplots**
 ```{r, echo = FALSE}
 grid.arrange(scatter1, scatter2, ncol = 2
             )
@@ -701,6 +630,7 @@ grid.arrange(scatter1, scatter2, ncol = 2
 
 The Universal Kriging model for NO₂ prediction demonstrated good performance during cross-validation. The 5-fold cross-validation yielded a root mean square error (RMSE) of 1.31 ppb and an R² value of 0.751, while the leave-one-out cross-validation (LOO CV) showed slightly better performance, with an RMSE of 1.24 ppb and an R² of 0.776. These results indicate that the model captures a significant portion of the variability in NO₂ concentrations while maintaining relatively low prediction error.
 
+**Table 1: NO2 Model Cross Validation**
 ```{r get mse of lur, echo = FALSE}
 # now check the results from the CV function
 # Summarize with get_MSE
@@ -732,9 +662,110 @@ This study identified a positive association between NO₂ concentrations and de
 
 This project utilized OpenAI's ChatGPT model for assistance in developing, condensing, and refining the language used in the results and discussion sections. The initial laboratory code was written and submitted as part of assignments throughout the quarter and later adapted for use in this project. The AI model was specifically employed to help streamline and clarify the presentation of findings, ensure consistency, and enhance readability. All analyses, interpretations, and conclusions were independently derived based on the project data and research objectives.
 
+# Author Contributions
+
+Rachael contributed code for analysis, data cleaning, cleaning, data preparation, drafted tables and figures, and editing of report.
+
+Hunt contributed data gathering, drafted writings & report, and set up collaboration systems (github).
+
+Both authors contributed equally to hypothesis generation and method development with assistance from ENV H 556 instructors.
+
 # References
 
 [@blanco_characterization_2022]
+
+[@dominski_effects_2021]
+
+# Results Appendix
+
+**Appendix Table 1: Annual Data Descriptives**
+
+```{r make a summary table, echo=TRUE, echo = FALSE}
+#-----table with dplyr------
+annual_summary <- annual_sites %>% 
+  group_by(variable, site_named) %>% 
+  summarise(,
+            Arithmetic_Mean = mean(value, na.rm = TRUE),
+            Arithmetic_SD = sd(value, na.rm = TRUE),
+            Geo_Mean = geoMean(value, na.rm = TRUE),
+            Geo_SD = geoSD(value, na.rm = TRUE),
+        
+            )
+
+
+# And here is the same result printed using kable
+kable(annual_summary,
+      # only show 2 digits
+      digits = 2)
+
+```
+
+**Appendix Figure 1: NO2 Distribution Histogram**
+
+```{r histogram of no2, warning=FALSE, message=FALSE, echo = FALSE}
+#-----Make a histogram of no2 measurements-----------
+
+# Calculate the mean and standard deviation of the 'value' column
+mean_value_no2 <- mean(annual$value[annual$variable == "no2"], na.rm = TRUE)
+sd_value_no2 <- sd(annual$value[annual$variable == "no2"], na.rm = TRUE)
+
+# Create the density plot with the normal distribution overlay
+# The purple line is a kernel density estimate representing the true shape of your data, while the red dashed line assumes a perfect normal distribution with the same mean and standard deviation.
+
+p_no2 <- annual %>%
+  filter(variable == "no2") %>%
+  ggplot(aes(x = value)) +
+  # Add the density curve with some transparency
+  geom_density(alpha = 0.5, color = "purple") +
+  # Add the normal distribution curve using stat_function
+  stat_function(fun = dnorm, args = list(mean = mean_value_no2, sd = sd_value_no2),
+                color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = mean_value_no2, linetype = "dotted") +
+  theme_classic() + 
+  #  a few style options, such as axis expansion so the bars aren't "floating" and an overall theme.
+  scale_y_continuous(expand = expand_scale(mult = c(0, .1))) + 
+  #add x label
+  xlab("Measurement (ppb)") +
+  #add title and blanking the y axis for readability later
+  labs(title = "NO2", y = " ")
+
+
+# Display the plot
+p_no2
+
+```
+
+## Semi-Variogram Cloud
+
+The semi-variogram cloud illustrates how semi-variance changes with spatial distance. The red smoothed curve shows the general trend, with semi-variance increasing slightly as distance grows, indicating moderate spatial autocorrelation in NO₂ levels. Although individual points vary, the curve provides a reliable foundation for fitting a variogram model, which is crucial for Universal Kriging. The flatter trend at larger distances suggests a limited range of spatial dependence.
+
+**Appendix Figure 2: Semi-Variogram Smoothed**
+
+```{r empirical variogram of no2, echo=FALSE, echo = FALSE}
+# ---- Empirical Variogram Plots ----
+
+# Variogram Cloud
+vgm_emp <- variogram(value ~ 1, annual_sf, cloud = TRUE)
+
+#ggplot(vgm_emp, aes(x = dist, y = gamma)) + 
+ # geom_point(alpha = 0.1) + 
+ # labs(x = "Distance (meters)") + 
+ # xlim(0, max(vgm_emp$dist) * 2)
+
+ggplot(data = vgm_emp, aes(x = dist, y = gamma)) +
+  geom_point(shape = 1, alpha = 0.6) +
+  geom_smooth(se = FALSE, color = "red", linetype = "solid",
+              method = "loess", 
+              span = .8
+              ) +
+  labs(x = "Distance (meters)", 
+       y = "Semi-variance",
+       title = "Semi-variogram Cloud with Smoothed Curve") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(0, max(vgm_emp$dist))
+```
+
 
 # Code Appendix
 
